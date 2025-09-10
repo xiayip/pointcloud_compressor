@@ -47,54 +47,59 @@ namespace pointcloud_compressor
       if (field.name == "rgb")
         rgb_offset = field.offset;
     }
-
-    // 检查是否找到 x, y, z 字段
     if (x_offset == -1 || y_offset == -1 || z_offset == -1)
     {
       RCLCPP_ERROR(logger_, "PointCloud2 message does not contain x, y, z fields");
       return false;
     }
+    bool has_rgb = (rgb_offset != -1);
 
-    // 提取点云数据
+    size_t num_points = cloud.width * cloud.height;
     std::vector<float> points;
     std::vector<uint8_t> colors;
-    for (size_t i = 0; i < cloud.width * cloud.height; i++)
+    
+    // Pre-allocate vectors with exact size for optimal performance
+    points.resize(num_points * 3);
+    if (has_rgb) {
+      colors.resize(num_points * 3);
+    }
+    
+    for (size_t i = 0; i < num_points; i++)
     {
       const uint8_t *point_ptr = &cloud.data[0] + i * cloud.point_step;
 
-      // 提取 x, y, z 值
+      // get x, y, z
       float x = *reinterpret_cast<const float *>(point_ptr + x_offset);
       float y = *reinterpret_cast<const float *>(point_ptr + y_offset);
       float z = *reinterpret_cast<const float *>(point_ptr + z_offset);
 
-      // 将点数据添加到 points 向量
-      points.push_back(x);
-      points.push_back(y);
-      points.push_back(z);
+      size_t point_idx = i * 3;
+      points[point_idx] = x;
+      points[point_idx + 1] = y;
+      points[point_idx + 2] = z;
 
-      // 提取 RGB 值
-      if (rgb_offset != -1)
+      // get rgb if available
+      if (has_rgb)
       {
         uint32_t rgb = *reinterpret_cast<const uint32_t *>(point_ptr + rgb_offset);
-        colors.push_back((rgb >> 16) & 0xFF);  // R
-        colors.push_back((rgb >> 8) & 0xFF);   // G
-        colors.push_back(rgb & 0xFF);          // B
+        colors[point_idx] = (rgb >> 16) & 0xFF;      // R
+        colors[point_idx + 1] = (rgb >> 8) & 0xFF;   // G
+        colors[point_idx + 2] = rgb & 0xFF;          // B
       }
     }
 
-    // 调用 Draco 编码函数
-    uint8_t colors_channel = rgb_offset != -1 ? 3 : 0;
+    // encode using Draco
+    uint8_t colors_channel = has_rgb ? 3 : 0;
     DracoFunctions::EncodedObject obj = DracoFunctions::encode_point_cloud(
         points, quantization_bits_, compression_level_, 0.0, nullptr, false, false, 0, colors, colors_channel);
 
-    // 检查编码是否成功
+    // check encoding status
     if (obj.encode_status != DracoFunctions::successful_encoding)
     {
       RCLCPP_ERROR(logger_, "Failed to encode point cloud");
       return false;
     }
-
-    // 将编码后的数据复制到 ByteMultiArray
+    // assign encoded data to ByteMultiArray
     encoded_data.data.assign(obj.buffer.begin(), obj.buffer.end());
     RCLCPP_DEBUG(logger_, "Successfully encoded point cloud (%zu bytes)", encoded_data.data.size());
     return true;
@@ -158,7 +163,7 @@ namespace pointcloud_compressor
       
       // Process RGB data if available
       if (has_rgb && i < obj.colors.size() && iter_rgb) {
-        uint32_t rgb = (static_cast<uint32_t>(obj.colors[i]) << 16) |     // R
+        uint32_t rgb = (static_cast<uint32_t>(obj.colors[i]) << 16) |      // R
                        (static_cast<uint32_t>(obj.colors[i + 1]) << 8) |   // G
                        static_cast<uint32_t>(obj.colors[i + 2]);           // B
         float rgb_float;

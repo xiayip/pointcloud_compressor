@@ -207,31 +207,6 @@ ros2 run rviz2 rviz2
 # Add PointCloud2 display for /decompressed_pointcloud topic
 ```
 
-## Troubleshooting
-
-### Common Issues
-
-1. **Build Errors**:
-   - Ensure Draco library is properly installed
-   - Check CMakeLists.txt for correct library linking
-
-2. **Runtime Errors**:
-   - Verify input PointCloud2 format has required fields
-   - Check compression/decompression parameter consistency
-
-3. **Performance Issues**:
-   - Reduce compression level for faster processing
-   - Increase quantization bits for better quality
-   - Monitor memory usage for large point clouds
-
-### Debug Information
-
-Enable debug logging for detailed information:
-```bash
-ros2 run pointcloud_compressor pointcloud_compressor_node \
-  --ros-args --log-level DEBUG
-```
-
 ## API Reference
 
 ### PointCloudCodec Class
