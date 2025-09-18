@@ -1,13 +1,14 @@
 #include "pointcloud_compressor/pointcloud_codec.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_components/register_node_macro.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "std_msgs/msg/byte_multi_array.hpp"
 
 class PointCloudCompressorNode : public rclcpp::Node
 {
 public:
-  PointCloudCompressorNode()
-      : Node("pointcloud_compressor_node")
+  explicit PointCloudCompressorNode(const rclcpp::NodeOptions& options)
+      : Node("pointcloud_compressor_node", options)
   {
     // Declare parameters
     this->declare_parameter("input_topic", "input_pointcloud");
@@ -80,8 +81,12 @@ private:
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<PointCloudCompressorNode>();
+  rclcpp::NodeOptions options;
+  auto node = std::make_shared<PointCloudCompressorNode>(options);
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
 }
+
+// Register the component with the ROS2 component system
+RCLCPP_COMPONENTS_REGISTER_NODE(PointCloudCompressorNode)

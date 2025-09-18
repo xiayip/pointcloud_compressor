@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 # find_package(pcl_ros REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -16,17 +17,56 @@ find_package(draco REQUIRED)
 include_directories(
   include
   ${rclcpp_INCLUDE_DIRS}
+  ${rclcpp_components_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
   ${std_msgs_INCLUDE_DIRS}
   ${draco_INCLUDE_DIRS}
 )
 
+# Create shared library for the composable node
+add_library(pointcloud_compressor_component SHARED
+  src/pointcloud_compressor_node.cpp
+  src/pointcloud_codec.cpp
+)
+ament_target_dependencies(pointcloud_compressor_component
+  rclcpp
+  rclcpp_components
+  sensor_msgs
+  std_msgs
+)
+target_link_libraries(pointcloud_compressor_component
+  draco::draco
+)
+
+# Register the component
+rclcpp_components_register_nodes(pointcloud_compressor_component "PointCloudCompressorNode")
+
+# Create shared library for the decompressor composable node
+add_library(pointcloud_decompressor_component SHARED
+  src/pointcloud_decompressor_node.cpp
+  src/pointcloud_codec.cpp
+)
+ament_target_dependencies(pointcloud_decompressor_component
+  rclcpp
+  rclcpp_components
+  sensor_msgs
+  std_msgs
+)
+target_link_libraries(pointcloud_decompressor_component
+  draco::draco
+)
+
+# Register the decompressor component
+rclcpp_components_register_nodes(pointcloud_decompressor_component "PointCloudDecompressorNode")
+
+# Create executable that uses the component
 add_executable(pointcloud_compressor_node 
   src/pointcloud_compressor_node.cpp
   src/pointcloud_codec.cpp
 )
 ament_target_dependencies(pointcloud_compressor_node
   rclcpp
+  rclcpp_components
   sensor_msgs
   std_msgs
 )
@@ -40,11 +80,20 @@ add_executable(pointcloud_decompressor_node
 )
 ament_target_dependencies(pointcloud_decompressor_node
   rclcpp
+  rclcpp_components
   sensor_msgs
   std_msgs
 )
 target_link_libraries(pointcloud_decompressor_node
   draco::draco
+)
+
+install(TARGETS
+  pointcloud_compressor_component
+  pointcloud_decompressor_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 install(TARGETS
