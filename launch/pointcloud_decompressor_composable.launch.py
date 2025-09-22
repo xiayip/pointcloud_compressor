@@ -12,7 +12,7 @@ def generate_launch_description():
     return LaunchDescription([
         # Create composable node container
         ComposableNodeContainer(
-            name=LaunchConfiguration('container_name'),
+            name='pointcloud_container',
             namespace='',
             package='rclcpp_components',
             executable='component_container',
@@ -22,8 +22,8 @@ def generate_launch_description():
                     plugin='PointCloudDecompressorNode',
                     name='pointcloud_decompressor_node',
                     parameters=[{
-                        'input_topic': 'odin1/cloud_slam', 
-                        'output_topic': 'compressed_pointcloud',
+                        'input_topic': 'compressed_pointcloud', 
+                        'output_topic': 'decompressed_pointcloud',
                     }],
                 ),
             ],
